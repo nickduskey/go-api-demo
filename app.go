@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
@@ -34,7 +36,7 @@ func (a *App) Initialize(user, password, dbname string) {
 
 // Run - run the app
 func (a *App) Run(addr string) {
-	log.Fatal(http.ListenAndServe(":8000", a.Router))
+	log.Fatal(http.ListenAndServe(":8000", handlers.LoggingHandler(os.Stdout, a.Router)))
 }
 
 func (a *App) initializeRoutes() {
