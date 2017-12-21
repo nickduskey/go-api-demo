@@ -1,2 +1,6 @@
+# config files
 .env
+!.env.example
+
+# binaries
 api-demo
