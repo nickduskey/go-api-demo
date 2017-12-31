@@ -52,7 +52,6 @@ func (a *App) GetProducts(w http.ResponseWriter, r *http.Request) {
 
 	products, err := models.GetProducts(a.DB, start, count)
 	if err != nil {
-		log.Printf("error:", err)
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
