@@ -31,7 +31,7 @@ func (p *Product) UpdateProduct(db *sql.DB) error {
 
 // DeleteProduct deletes a product
 func (p *Product) DeleteProduct(db *sql.DB) error {
-	_, err := db.Exec("DELETE FROM products WHERE id=$1, p.ID")
+	_, err := db.Exec("DELETE FROM products WHERE id=$1", p.ID)
 
 	return err
 }
