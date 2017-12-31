@@ -3,11 +3,12 @@ package main
 import (
 	"os"
 
+	"github.com/nickduskey/api-demo/app"
 	"github.com/subosito/gotenv"
 )
 
 func main() {
-	a := App{}
+	a := app.App{}
 	gotenv.Load()
 	a.Initialize(
 		os.Getenv("APP_DB_USERNAME"),

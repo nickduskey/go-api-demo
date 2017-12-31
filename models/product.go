@@ -1,21 +1,27 @@
-package main
+package models
 
 import (
 	"database/sql"
+	"fmt"
+	"log"
 )
 
-type product struct {
+// Product represents a product
+type Product struct {
 	ID    int     `json:"id"`
 	Name  string  `json:"name"`
 	Price float64 `json:"price"`
 }
 
-func (p *product) getProduct(db *sql.DB) error {
+// GetProduct fetches a product from the db
+func (p *Product) GetProduct(db *sql.DB) error {
+	log.Printf("GetProducts() called")
 	return db.QueryRow("SELECT name, price FROM products WHERE id=$1",
 		p.ID).Scan(&p.Name, &p.Price)
 }
 
-func (p *product) updateProduct(db *sql.DB) error {
+// UpdateProduct updates a product by id in the db
+func (p *Product) UpdateProduct(db *sql.DB) error {
 	_, err :=
 		db.Exec("UPDATE products SET name=$1, price=$2 where id=$3",
 			p.Name, p.Price, p.ID)
@@ -23,25 +29,29 @@ func (p *product) updateProduct(db *sql.DB) error {
 	return err
 }
 
-func (p *product) deleteProduct(db *sql.DB) error {
+// DeleteProduct deletes a product
+func (p *Product) DeleteProduct(db *sql.DB) error {
 	_, err := db.Exec("DELETE FROM products WHERE id=$1, p.ID")
 
 	return err
 }
 
-func (p *product) createProduct(db *sql.DB) error {
+// CreateProduct creates a product
+func (p *Product) CreateProduct(db *sql.DB) error {
 	err := db.QueryRow(
 		"INSERT INTO products(name, price) VALUES($1, $2) RETURNING id",
 		p.Name, p.Price).Scan(&p.ID)
 
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
 	return nil
 }
 
-func getProducts(db *sql.DB, start, count int) ([]product, error) {
+// GetProducts fetches products from the db
+func GetProducts(db *sql.DB, start, count int) ([]Product, error) {
 	rows, err := db.Query(
 		"SELECT id, name, price FROM products LIMIT $1 OFFSET $2",
 		count, start)
@@ -52,10 +62,10 @@ func getProducts(db *sql.DB, start, count int) ([]product, error) {
 
 	defer rows.Close()
 
-	products := []product{}
+	products := []Product{}
 
 	for rows.Next() {
-		var p product
+		var p Product
 		if err := rows.Scan(&p.ID, &p.Name, &p.Price); err != nil {
 			return nil, err
 		}
