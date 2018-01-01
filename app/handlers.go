@@ -6,12 +6,40 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	"github.com/nickduskey/api-demo/models"
 	"github.com/nickduskey/api-demo/utils"
 )
+
+// NotImplementedHandler a placeholder
+func (a *App) NotImplementedHandler(w http.ResponseWriter, r *http.Request) {
+	utils.RespondWithJSON(w, http.StatusOK, nil)
+}
+
+// LoginHandler handles login auth
+func (a *App) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	// Fetch user based on username
+	// Hash request password from the body
+	// Compare password
+	// If valid user and good password generate the token
+	signingKey := []byte(os.Getenv("JWT_SECRET"))
+
+	// create claims
+	claims := &jwt.StandardClaims{
+		ExpiresAt: 15000,
+		Issuer:    "test",
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedString, err := token.SignedString(signingKey)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+	}
+	utils.RespondWithJSON(w, http.StatusOK, signedString)
+}
 
 // GetProduct responds with JSON product
 func (a *App) GetProduct(w http.ResponseWriter, r *http.Request) {

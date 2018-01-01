@@ -4,18 +4,19 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"net/http"
-	"os"
 
-	"github.com/gorilla/handlers"
+	"github.com/auth0/go-jwt-middleware"
+	"github.com/codegangsta/negroni"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq" // need to load postgres
 )
 
 // App main application
 type App struct {
-	Router *mux.Router
-	DB     *sql.DB
+	Router    *mux.Router
+	APIRouter *mux.Router
+	DB        *sql.DB
 }
 
 // Initialize - init the app
@@ -31,23 +32,44 @@ func (a *App) Initialize(user, password, dbname string) {
 
 	a.Router = mux.NewRouter()
 	a.initializeRoutes()
+	a.APIRouter = mux.NewRouter()
+	a.initializeAPIRoutes()
 }
 
 // Run - run the app
 func (a *App) Run(addr string) {
 	log.Printf("App running on port %s", addr)
-	log.Fatal(http.ListenAndServe(addr, handlers.LoggingHandler(os.Stdout, a.Router)))
+	n := negroni.Classic()
+
+	n.UseHandler(a.Router)
+	n.Run(addr)
 }
 
 func (a *App) initializeRoutes() {
-	a.Router.HandleFunc("/products", a.GetProducts).Methods("GET")
-	a.Router.HandleFunc("/products", a.CreateProduct).Methods("POST")
-	a.Router.HandleFunc("/product/{id:[0-9]+}", a.GetProduct).Methods("GET")
-	a.Router.HandleFunc("/product/{id:[0-9]+}", a.UpdateProduct).Methods("PUT")
-	a.Router.HandleFunc("/product/{id:[0-9]+}", a.DeleteProduct).Methods("DELETE")
-	a.Router.HandleFunc("/users", a.GetUsers).Methods("GET")
-	a.Router.HandleFunc("/users", a.CreateUser).Methods("POST")
-	a.Router.HandleFunc("/user/{id:[0-9]+}", a.GetUser).Methods("GET")
-	a.Router.HandleFunc("/user/{id:[0-9]+}", a.UpdateUser).Methods("PUT")
-	a.Router.HandleFunc("/user/{id:[0-9]+}", a.DeleteUser).Methods("DELETE")
+	a.Router.HandleFunc("/api/status", a.NotImplementedHandler).Methods("GET")
+	a.Router.HandleFunc("/api/login", a.NotImplementedHandler).Methods("POST")
+	a.Router.HandleFunc("/api/logout", a.NotImplementedHandler).Methods("GET")
+}
+
+func (a *App) initializeAPIRoutes() {
+	mw := jwtmiddleware.New(jwtmiddleware.Options{
+		ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+			return []byte("secret"), nil
+		},
+		SigningMethod: jwt.SigningMethodHS256,
+	})
+
+	a.APIRouter.HandleFunc("/api/products", a.GetProducts).Methods("GET")
+	a.APIRouter.HandleFunc("/api/products", a.CreateProduct).Methods("POST")
+	a.APIRouter.HandleFunc("/api/product/{id:[0-9]+}", a.GetProduct).Methods("GET")
+	a.APIRouter.HandleFunc("/api/product/{id:[0-9]+}", a.UpdateProduct).Methods("PUT")
+	a.APIRouter.HandleFunc("/api/product/{id:[0-9]+}", a.DeleteProduct).Methods("DELETE")
+	a.APIRouter.HandleFunc("/api/users", a.GetUsers).Methods("GET")
+	a.APIRouter.HandleFunc("/api/users", a.CreateUser).Methods("POST")
+	a.APIRouter.HandleFunc("/api/user/{id:[0-9]+}", a.GetUser).Methods("GET")
+	a.APIRouter.HandleFunc("/api/user/{id:[0-9]+}", a.UpdateUser).Methods("PUT")
+	a.APIRouter.HandleFunc("/api/user/{id:[0-9]+}", a.DeleteUser).Methods("DELETE")
+
+	an := negroni.New(negroni.HandlerFunc(mw.HandlerWithNext), negroni.Wrap(a.APIRouter))
+	a.Router.PathPrefix("/api").Handler(an)
 }
