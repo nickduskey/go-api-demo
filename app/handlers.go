@@ -4,20 +4,26 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
-	"github.com/nickduskey/api-demo/models"
+	"github.com/nickduskey/api-demo/products"
+	"github.com/nickduskey/api-demo/users"
 	"github.com/nickduskey/api-demo/utils"
 )
 
 // NotImplementedHandler a placeholder
 func (a *App) NotImplementedHandler(w http.ResponseWriter, r *http.Request) {
 	utils.RespondWithJSON(w, http.StatusOK, nil)
+}
+
+// StatusHandler provides a status endpoint
+func (a *App) StatusHandler(w http.ResponseWriter, r *http.Request) {
+	status := map[string]string{"message": "API up and running!"}
+	utils.RespondWithJSON(w, http.StatusOK, status)
 }
 
 // LoginHandler handles login auth
@@ -44,14 +50,15 @@ func (a *App) LoginHandler(w http.ResponseWriter, r *http.Request) {
 // GetProduct responds with JSON product
 func (a *App) GetProduct(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+	u64id, err := strconv.ParseUint(vars["id"], 10, 32)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid product ID")
 		return
 	}
+	id := uint(u64id)
 
-	p := models.Product{ID: id}
-	if err := p.GetProduct(a.DB); err != nil {
+	p := products.Product{ID: id}
+	if err := p.GetSingle(a.DB); err != nil {
 		switch err {
 		case sql.ErrNoRows:
 			utils.RespondWithError(w, http.StatusNotFound, "Product not found")
@@ -66,19 +73,18 @@ func (a *App) GetProduct(w http.ResponseWriter, r *http.Request) {
 
 // GetProducts responds with JSON products
 func (a *App) GetProducts(w http.ResponseWriter, r *http.Request) {
-	log.Printf("a.GetProducts() called")
 	vars := mux.Vars(r)
-	count, _ := strconv.Atoi(vars["count"])
-	start, _ := strconv.Atoi(vars["start"])
+	offset, _ := strconv.Atoi(vars["offset"])
+	limit, _ := strconv.Atoi(vars["limit"])
 
-	if count > 10 || count < 1 {
-		count = 10
+	if limit > 10 || limit < 1 {
+		limit = 10
 	}
-	if start < 0 {
-		start = 0
+	if offset < 0 {
+		offset = 0
 	}
 
-	products, err := models.GetProducts(a.DB, start, count)
+	products, err := products.Get(a.DB, offset, limit)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -89,7 +95,7 @@ func (a *App) GetProducts(w http.ResponseWriter, r *http.Request) {
 
 // CreateProduct responds with JSON product created
 func (a *App) CreateProduct(w http.ResponseWriter, r *http.Request) {
-	var p models.Product
+	var p products.Product
 	decoder := json.NewDecoder(r.Body)
 	fmt.Println(r.Body)
 	if err := decoder.Decode(&p); err != nil {
@@ -99,7 +105,7 @@ func (a *App) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if err := p.CreateProduct(a.DB); err != nil {
+	if err := p.Create(a.DB); err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -110,13 +116,14 @@ func (a *App) CreateProduct(w http.ResponseWriter, r *http.Request) {
 // UpdateProduct responds with updated product JSON
 func (a *App) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+	u64id, err := strconv.ParseUint(vars["id"], 10, 32)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid Product ID")
 		return
 	}
+	id := uint(u64id)
 
-	var p models.Product
+	var p products.Product
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&p); err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
@@ -125,7 +132,7 @@ func (a *App) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	p.ID = id
 
-	if err := p.UpdateProduct(a.DB); err != nil {
+	if err := p.Update(a.DB); err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -136,14 +143,15 @@ func (a *App) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 // DeleteProduct responds with delete result JSON
 func (a *App) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+	u64id, err := strconv.ParseUint(vars["id"], 10, 32)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid Product ID")
 		return
 	}
+	id := uint(u64id)
 
-	p := models.Product{ID: id}
-	if err := p.DeleteProduct(a.DB); err != nil {
+	p := products.Product{ID: id}
+	if err := p.Delete(a.DB); err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -154,14 +162,15 @@ func (a *App) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 // GetUser responds with user JSON
 func (a *App) GetUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+	u64id, err := strconv.ParseUint(vars["id"], 10, 32)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
+	id := uint(u64id)
 
-	u := models.User{ID: id}
-	if err := u.GetUser(a.DB); err != nil {
+	u := users.User{ID: id}
+	if err := u.GetSingle(a.DB); err != nil {
 		switch err {
 		case sql.ErrNoRows:
 			utils.RespondWithError(w, http.StatusNotFound, "User not found")
@@ -176,17 +185,17 @@ func (a *App) GetUser(w http.ResponseWriter, r *http.Request) {
 
 // GetUsers responds with users JSON
 func (a *App) GetUsers(w http.ResponseWriter, r *http.Request) {
-	count, _ := strconv.Atoi(r.FormValue("count"))
-	start, _ := strconv.Atoi(r.FormValue("start"))
+	offset, _ := strconv.Atoi(r.FormValue("offset"))
+	limit, _ := strconv.Atoi(r.FormValue("limit"))
 
-	if count > 10 || count < 1 {
-		count = 10
+	if limit > 10 || limit < 1 {
+		limit = 10
 	}
-	if start < 0 {
-		start = 0
+	if offset < 0 {
+		offset = 0
 	}
 
-	users, err := models.GetUsers(a.DB, start, count)
+	users, err := users.Get(a.DB, offset, limit)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -197,7 +206,7 @@ func (a *App) GetUsers(w http.ResponseWriter, r *http.Request) {
 
 // CreateUser responds with created user JSON
 func (a *App) CreateUser(w http.ResponseWriter, r *http.Request) {
-	var u models.User
+	var u users.User
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&u); err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, err.Error())
@@ -205,7 +214,7 @@ func (a *App) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if err := u.CreateUser(a.DB); err != nil {
+	if err := u.Create(a.DB); err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -215,13 +224,14 @@ func (a *App) CreateUser(w http.ResponseWriter, r *http.Request) {
 // UpdateUser responds with updated user JSON
 func (a *App) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+	u64id, err := strconv.ParseUint(vars["id"], 10, 32)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid User ID")
 		return
 	}
+	id := uint(u64id)
 
-	var u models.User
+	var u users.User
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&u); err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
@@ -230,7 +240,7 @@ func (a *App) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	u.ID = id
 
-	if err := u.UpdateUser(a.DB); err != nil {
+	if err := u.Update(a.DB); err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -241,14 +251,15 @@ func (a *App) UpdateUser(w http.ResponseWriter, r *http.Request) {
 // DeleteUser responds with delete status JSON
 func (a *App) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+	u64id, err := strconv.ParseUint(vars["id"], 10, 32)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid User ID")
 		return
 	}
+	id := uint(u64id)
 
-	u := models.User{ID: id}
-	if err := u.DeleteUser(a.DB); err != nil {
+	u := users.User{ID: id}
+	if err := u.Delete(a.DB); err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
