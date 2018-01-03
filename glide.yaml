@@ -1,4 +1,4 @@
-package: github.com/nickduskey/api-demo
+package: github.com/nickduskey/go-api-demo
 license: MIT
 owners:
 - name: Nick Duskey
