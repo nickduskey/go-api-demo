@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -21,17 +20,10 @@ type App struct {
 }
 
 // Initialize - init the app
-func (a *App) Initialize(host, user, password, dbname string) {
+func (a *App) Initialize(db *gorm.DB) {
 	log.Printf("Initializing app...")
-	connectionString := fmt.Sprintf("host=%s user=%s dbname=%s sslmode=disable password=%s", host, user, dbname, password)
 
-	var err error
-	a.DB, err = gorm.Open("postgres", connectionString)
-	defer a.DB.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	a.DB = db
 	a.Router = mux.NewRouter()
 	a.initializeRoutes()
 	a.APIRouter = mux.NewRouter()

@@ -2,7 +2,7 @@ package products
 
 import (
 	"time"
-
+	"fmt"
 	"github.com/jinzhu/gorm"
 )
 
@@ -39,7 +39,8 @@ func (p *Product) Create(db *gorm.DB) error {
 // Get fetches products from the db
 func Get(db *gorm.DB, offset, limit int) ([]Product, error) {
 	var p []Product
-	if err := db.Offset(offset).Limit(limit).Find(&p).Error; err != nil {
+	if err := db.Find(&p).Error; err != nil {
+		fmt.Println(err)
 		return p, err
 	}
 	return p, nil
