@@ -73,9 +73,10 @@ func (a *App) GetProduct(w http.ResponseWriter, r *http.Request) {
 
 // GetProducts responds with JSON products
 func (a *App) GetProducts(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	offset, _ := strconv.Atoi(vars["offset"])
-	limit, _ := strconv.Atoi(vars["limit"])
+	v := r.URL.Query()
+
+	offset, _ := strconv.Atoi(v.Get("offset"))
+	limit, _ := strconv.Atoi(v.Get("limit"))
 
 	if limit > 10 || limit < 1 {
 		limit = 10
@@ -185,8 +186,10 @@ func (a *App) GetUser(w http.ResponseWriter, r *http.Request) {
 
 // GetUsers responds with users JSON
 func (a *App) GetUsers(w http.ResponseWriter, r *http.Request) {
-	offset, _ := strconv.Atoi(r.FormValue("offset"))
-	limit, _ := strconv.Atoi(r.FormValue("limit"))
+	v := r.URL.Query()
+
+	offset, _ := strconv.Atoi(v.Get("offset"))
+	limit, _ := strconv.Atoi(v.Get("limit"))
 
 	if limit > 10 || limit < 1 {
 		limit = 10
